@@ -1,0 +1,75 @@
+import sys,math
+
+def calculate_radius(points):
+    midpoints=[]
+    gradients=[]
+    for i in range(2):
+        pt1, pt2=points[2*i : 2*i+2]
+        midpoints.append( ( (pt1[0] + pt2[0]) / 2, (pt1[1] + pt2[1]) / 2 ) )
+        gradients.append( (pt2[0] - pt1[0]) / (pt1[1] - pt2[1]) )
+    xCenter = (midpoints[1][1] - midpoints[0][1] + gradients[0] * midpoints[0][0] - gradients[1] * midpoints[1][0]) / (gradients[0] - gradients[1])
+    yCenter = gradients[0] * (xCenter - midpoints[0][0]) + midpoints[0][1]
+    radii = []
+    for pt in points:
+        radii.append(math.hypot(pt[0] - xCenter, pt[1] - yCenter))
+    muRad = sum(radii) / 4
+    sigmaRad = 0.0
+    for rad in radii:
+        sigrad += math.pow(rad - muRad, 2)
+    sigrad = math.sqrt(sigmaRad / 4)
+    return muRad, sigmaRad
+
+def radcalc_wrapper(argv,verbal=True):
+    if argv[0] == 'f':
+        with open(argv[1]) as f:
+            data = f.read().split()
+    elif argv[0] == 'cf':
+        with open(argv[1]) as f:
+            data = f.read().strip().split('\n')+['']
+        xs, xp, xl = map(float, data[0].split())
+        xs += 46.5
+        xp += 52.5
+        xl += 30
+        w = xp - xs
+        dl = xl - xp
+        res = []
+        xd = float(data[1]) + 58
+        pts = []
+        for l in data[2 : ]:
+            if ' ' in l:
+                pts += l.split()
+            else:
+                res.append((xd, radcalc_wrapper(pts, False)))
+                if l:
+                    xd = float(l)+58
+                    pts = []
+        f = open(argv[1]+'_res.csv', 'w')
+        f.write('# dl,dls,w,mr,sr,rt,th,al\n')
+        for r in res:
+            print('Xd:    ' + str(r[0]))
+            dls = r[0] - xl
+            print('Dls:   ' + str(dls))
+            print('Mr:    ' + str(r[1][0]))
+            print('Sr:    ' + str(r[1][1]))
+            rt = r[1][0] / w
+            theta = math.atan(rt)
+            print('theta: ' + str(theta))
+            alpha = theta + math.atan(rt * dl / dls)
+            print('alpha: ' + str(alpha))
+            print('')
+            f.write(', '.join( map(str, [dl, dls, w, r[1][0], r[1][1], rt, theta, alpha]) ))
+            f.write('\n')
+        f.close()
+        return None
+    else:
+        data = argv
+    points=[(float(data[2*i]),float(data[2*i+1])) for i in range(len(data)//2)]
+    muRad, sigmaRad = calculate_radius(points)
+    if verbal:
+        print('Mean radius:               ' + str(m))
+        print('Radius uncertainty(sigma): ' + str(s))
+    else:
+        return muRad, sigmaRad
+
+if __name__ == '__main__' and len(sys.argv)>1:
+    radcalc_wrapper(sys.argv[1 : ])
